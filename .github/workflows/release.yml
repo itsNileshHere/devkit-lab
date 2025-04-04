@@ -1,0 +1,28 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+# permissions
+permissions:
+  contents: write
+  
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Create ZIP file
+        run: zip -r devkit-tools.zip *.bat README.md
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: devkit-tools.zip
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
