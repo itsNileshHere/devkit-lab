@@ -1,7 +1,18 @@
-# Icon and Thumbnail Cache Clearing Script
+# devkit-lab
 
-This script allows you to clear the icon and thumbnail cache in Windows10+. It can be useful if you are experiencing issues with icons or thumbnails not displaying correctly.
+A collection of useful Windows system utility scripts.
+
+## Scripts
+
+- **Rebuild Icon Cache.bat** - Fixes corrupted Windows icons and thumbnails
+- **Chrome Policy Remover.bat** - Removes Chrome browser management policies
+- **OneDrive Removal Script.bat** - Completely removes OneDrive from Windows
 
 ## Usage
-Download the file and **Run as Administrator**.
-Press Enter after the script completes to restart shell
+
+1. Right-click the script you want to use
+2. Select "Run as Administrator"
+
+Note: All scripts require administrator privileges to run.
+
+Use with caution. Back up important data before running these scripts.
