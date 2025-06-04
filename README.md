@@ -7,6 +7,8 @@ A collection of useful Windows system utility scripts.
 - **Rebuild Icon Cache.bat** - Fixes corrupted Windows icons and thumbnails
 - **Chrome Policy Remover.bat** - Removes Chrome browser management policies
 - **OneDrive Removal Script.bat** - Completely removes OneDrive from Windows
+- **Install-VCRedist-DirectX.bat** - Automatically installs Visual C++ Redistributables and DirectX
+- **EDGE Remove.bat** - Completely removes Microsoft Edge and related services from Windows
 
 ## Usage
 
