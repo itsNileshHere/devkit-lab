@@ -422,8 +422,8 @@ try {
         "${env:ProgramData}\Microsoft\EdgeUpdate",
         "${env:SystemRoot}\System32\Microsoft-Edge",
         "${env:SystemRoot}\System32\Microsoft-EdgeCore",
-        "${env:SystemRoot}\System32\Microsoft-Edge-WebView",
-        "${env:SystemRoot}\WinSxS\amd64_microsoft-edge-webview*"
+        # "${env:SystemRoot}\WinSxS\amd64_microsoft-edge-webview*",
+        "${env:SystemRoot}\System32\Microsoft-Edge-WebView"
     )
 
     foreach ($path in $EdgePaths) {
