@@ -8,21 +8,36 @@ on:
 # permissions
 permissions:
   contents: write
-  
+
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        
+
+      - name: Create staging folder
+        run: |
+          mkdir release-folder
+          cp *.bat README.md release-folder/
+
+      # Stripping Zone.Identifier
+      - name: Clean up file metadata
+        run: |
+          cd release-folder
+          find . -type f -exec cp {} {}.clean \;
+          find . -type f -name "*.clean" -exec bash -c 'mv "$0" "${0%.clean}"' {} \;
+
       - name: Create ZIP file
-        run: zip -r devkit-tools.zip *.bat README.md
-      
+        run: |
+          cd release-folder
+          zip ../devkit-tools.zip *
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: devkit-tools.zip
           draft: false
           prerelease: false
-          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
