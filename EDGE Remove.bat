@@ -1,10 +1,8 @@
 @(set "0=%~f0"^)#) & powershell -nop -c iex([io.file]::ReadAllText($env:0)) & exit /b
-
-# Check for Admin privileges
-if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Host "This script must be run as Administrator. Please re-run it with administrative privileges." -ForegroundColor Red
-    Read-Host -Prompt "Press Enter to exit"
-    Exit
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "This script must be run as Administrator. Re-launching with elevated privileges..." -ForegroundColor Yellow
+    Start-Process cmd -ArgumentList "/c `"$env:0`"" -Verb RunAs
+    exit
 }
 
 $RemoveWebView = $args -contains "-RemoveWebView"
@@ -480,16 +478,11 @@ try {
 
 # Restart Explorer
 Write-Host "`nRestarting Explorer..." -ForegroundColor Yellow
-try {
-    $ExplorerProcess = Get-Process -Name explorer -ErrorAction SilentlyContinue
-    if ($ExplorerProcess) {
-        Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 2
-    }
-    Start-Process -FilePath "${env:WINDIR}\explorer.exe" -WindowStyle Hidden
-} catch {
-    Write-Host "Explorer restart encountered an issue, but continuing..." -ForegroundColor Yellow
+$ExplorerProcess = Get-Process -Name explorer -ErrorAction SilentlyContinue
+if ($ExplorerProcess) {
+    taskkill.exe /F /IM "explorer.exe"
 }
+Start-Process "explorer.exe"
 
 if (-not $Silent) {
     Write-Host "`n===================================" -ForegroundColor Cyan

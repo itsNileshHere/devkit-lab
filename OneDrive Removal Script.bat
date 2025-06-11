@@ -1,11 +1,7 @@
 @(set "0=%~f0"^)#) & powershell -nop -c iex([io.file]::ReadAllText($env:0)) & exit /b
-$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-$isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $isAdmin) {
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "This script must be run as Administrator. Re-launching with elevated privileges..." -ForegroundColor Yellow
-    $scriptPath = $MyInvocation.MyCommand.Definition
-    $batchPath = $env:0
-    Start-Process cmd.exe -ArgumentList "/c `"$batchPath`"" -Verb RunAs
+    Start-Process cmd -ArgumentList "/c `"$env:0`"" -Verb RunAs
     exit
 }
 
@@ -25,39 +21,86 @@ if (Test-Path "$env:systemroot\System32\OneDriveSetup.exe") {
     & "$env:systemroot\System32\OneDriveSetup.exe" /uninstall
 }
 
+# Helper function for aggressive removal
 function Set-ForceOwnAndRemove {
-    param(
-        [string]$Path,
-        [switch]$Silent
-    )
-
-    if (-Not (Test-Path $Path)) { return }
+    param([Parameter(Mandatory)][string]$Path)
+    
     try {
-        $takeownArgs = @("/f", "$Path", "/r", "/d", "y")
-        $icaclsAdminArgs = @("$Path", "/grant", "administrators:F", "/t", "/c", "/l")
-        $icaclsSystemArgs = @("$Path", "/grant", "system:F", "/t", "/c", "/l")
-        $attribArgs = @("-R", "$Path", "/S", "/D")
-        $removeItemArgs = @("-Path", "$Path", "-Recurse", "-Force")
-        $rdArgs = @("/c", "rd", "/s", "/q", "`"$Path`"")
-        if ($Silent) {
-            $null = takeown @takeownArgs 2>&1
-            $null = icacls @icaclsAdminArgs 2>&1
-            $null = icacls @icaclsSystemArgs 2>&1
-            $null = attrib @attribArgs
-            $null = Remove-Item @removeItemArgs -ErrorAction SilentlyContinue
-        } else {
-            takeown @takeownArgs
-            icacls @icaclsAdminArgs
-            icacls @icaclsSystemArgs
-            attrib @attribArgs
-            Remove-Item @removeItemArgs -ErrorAction Stop
-        }
-    } catch {
-        if ($Silent) {
-            $null = cmd @rdArgs 2>&1
-        } else {
-            cmd @rdArgs
-        }
+        $FullPath = Resolve-Path -Path $Path -ErrorAction Stop
+        if (-not (Test-Path -Path $FullPath)) { return $true }
+        
+        $IsFolder = (Get-Item $FullPath).PSIsContainer
+        
+        # Remove read-only attributes
+        try {
+            if ($IsFolder) {
+                Get-ChildItem -Path $FullPath -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object {
+                    try {
+                        Set-ItemProperty -Path $_.FullName -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue
+                    } catch {}
+                }
+            } else {
+                Set-ItemProperty -Path $FullPath -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue
+            }
+        } catch {}
+        
+        # ACL method
+        try {
+            $Acl = Get-Acl $FullPath
+            $Acl.SetOwner([System.Security.Principal.NTAccount]"Administrators")
+            $CurrentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+            
+            if ($IsFolder) {
+                $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($CurrentUser, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+            } else {
+                $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($CurrentUser, "FullControl", "Allow")
+            }
+            
+            $Acl.SetAccessRule($AccessRule)
+            Set-Acl -Path $FullPath -AclObject $Acl
+            
+            # Apply to child items if folder
+            if ($IsFolder) {
+                Get-ChildItem -Path $FullPath -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object {
+                    try {
+                        $ChildAcl = Get-Acl $_.FullName
+                        $ChildAcl.SetOwner([System.Security.Principal.NTAccount]"Administrators")
+                        $ChildAcl.SetAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($CurrentUser, "FullControl", "Allow")))
+                        Set-Acl -Path $_.FullName -AclObject $ChildAcl
+                    } catch {}
+                }
+            }
+            
+            Remove-Item -Path $FullPath -Force -Recurse -ErrorAction Stop
+            return $true
+        } catch {}
+        
+        # icacls fallback
+        try {
+            if($IsFolder) { 
+                & takeown /F "$FullPath" /R /D Y 2>&1 | Out-Null 
+            } else { 
+                & takeown /F "$FullPath" /A 2>&1 | Out-Null 
+            }
+            
+            $CurrentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+            foreach ($Perm in @("*S-1-5-32-544:F", "System:F", "Administrators:F", "$CurrentUser`:F")) {
+                if($IsFolder) { 
+                    & icacls "$FullPath" /grant:R "$Perm" /T /C 2>&1 | Out-Null 
+                } else { 
+                    & icacls "$FullPath" /grant:R "$Perm" 2>&1 | Out-Null 
+                }
+                if ($LASTEXITCODE -eq 0) { break }
+            }
+            
+            Remove-Item -Path $FullPath -Force -Recurse -ErrorAction Stop
+            return $true
+        } catch {}
+        
+        return $false
+    }
+    catch {
+        return $false
     }
 }
 

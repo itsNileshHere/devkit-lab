@@ -1,38 +1,17 @@
 @(set "0=%~f0"^)#) & powershell -NoProfile -ExecutionPolicy Bypass -Command "iex([io.file]::ReadAllText($env:0))" & exit /b
-
-<#
-:: Visual C++ Redistributables and DirectX Silent Installer
-:: This script checks for and installs missing Visual C++ Redistributables (2008-2022) and DirectX
-#>
-
-# Check if running as administrator
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "This script needs to be run as Administrator. Please restart with elevated privileges." -ForegroundColor Red
-    Start-Sleep -Seconds 3
+    Write-Host "This script must be run as Administrator. Re-launching with elevated privileges..." -ForegroundColor Yellow
+    Start-Process cmd -ArgumentList "/c `"$env:0`"" -Verb RunAs
     exit
 }
 
-# Create a temporary folder for downloads
+# Create a temporary folder
 $tempFolder = "$env:TEMP\VC_DirectX_Installer"
 if (-not (Test-Path $tempFolder)) {
     New-Item -ItemType Directory -Path $tempFolder -Force | Out-Null
 }
 
-# Function to check if a specific Visual C++ version is installed
-function Test-VCRedistInstalled {
-    param (
-        [string]$DisplayName,
-        [string]$Architecture
-    )
-    
-    $installed = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*", 
-                                 "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*" -ErrorAction SilentlyContinue | 
-                Where-Object { $_.DisplayName -like "*$DisplayName*" -and $_.DisplayName -like "*$Architecture*" }
-    
-    return $null -ne $installed
-}
-
-# Function to download a file
+# Download function
 function Download-File {
     param (
         [string]$Url,
@@ -40,7 +19,7 @@ function Download-File {
     )
     
     Write-Host "Downloading $Url to $OutputPath..."
-    
+
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         $webClient = New-Object System.Net.WebClient
@@ -53,7 +32,7 @@ function Download-File {
     }
 }
 
-# Visual C++ Redistributables information
+# VC++ Redist info
 $vcRedists = @(
     @{
         Name = "Visual C++ 2008 x86"
@@ -137,7 +116,7 @@ $vcRedists = @(
     }
 )
 
-# DirectX information
+# DirectX info
 $directX = @{
     Name = "DirectX End-User Runtime"
     Url = "https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe"
@@ -145,7 +124,19 @@ $directX = @{
     Arguments = "/Q"
 }
 
-# Check and install Visual C++ Redistributables
+# Check if VC++ is installed
+function Test-VCRedistInstalled {
+    param (
+        [string]$DisplayName,
+        [string]$Architecture
+    )
+    
+    $installed = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*", "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*" -ErrorAction SilentlyContinue | 
+    Where-Object { $_.DisplayName -like "*$DisplayName*" -and $_.DisplayName -like "*$Architecture*" }
+    return $null -ne $installed
+}
+
+# Check and install VC++ Redist
 foreach ($vcRedist in $vcRedists) {
     Write-Host "Checking for $($vcRedist.Name)..."
     $installed = Test-VCRedistInstalled -DisplayName $vcRedist.DisplayName -Architecture $vcRedist.Architecture
@@ -169,7 +160,7 @@ foreach ($vcRedist in $vcRedists) {
     }
 }
 
-# Check if DirectX is installed (This is a basic check - DirectX is complex to verify completely)
+# Install DirectX
 Write-Host "Checking for DirectX..."
 $dxSetupPath = Join-Path $tempFolder $directX.Filename
 Download-File -Url $directX.Url -OutputPath $dxSetupPath
@@ -186,5 +177,5 @@ if ($process.ExitCode -eq 0 -or $process.ExitCode -eq 3010) {
 # Clean up
 Write-Host "Cleaning up temporary files..."
 Remove-Item -Path $tempFolder -Recurse -Force -ErrorAction SilentlyContinue
-
 Write-Host "Installation process completed!" -ForegroundColor Cyan
+Read-Host -Prompt "Done. Press Enter to exit"
