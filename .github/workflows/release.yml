@@ -11,29 +11,28 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Create staging folder
+      - name: Prepare release folder
+        shell: powershell
         run: |
-          mkdir release-folder
-          cp *.bat README.md release-folder/
+          New-Item -ItemType Directory -Path release-folder
+          Copy-Item -Path *.bat, README.md -Destination release-folder
 
-      # Stripping Zone.Identifier
-      - name: Clean up file metadata
+      - name: Cleanup Files
+        shell: powershell
         run: |
-          cd release-folder
-          find . -type f -exec cp {} {}.clean \;
-          find . -type f -name "*.clean" -exec bash -c 'mv "$0" "${0%.clean}"' {} \;
+          Get-ChildItem -Path release-folder -Recurse -File | Unblock-File
 
-      - name: Create ZIP file
+      - name: Create ZIP archive
+        shell: powershell
         run: |
-          cd release-folder
-          zip ../devkit-tools.zip *
+          Compress-Archive -Path release-folder\* -DestinationPath devkit-tools.zip -CompressionLevel Optimal -Force
 
-      - name: Create Release
+      - name: Publish Release
         uses: softprops/action-gh-release@v1
         with:
           files: devkit-tools.zip
