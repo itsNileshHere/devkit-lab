@@ -488,12 +488,6 @@ if (-not $Silent) {
     Write-Host "`n===================================" -ForegroundColor Cyan
     Write-Host " Microsoft Edge removal completed!" -ForegroundColor Green
     Write-Host "===================================" -ForegroundColor Cyan
-    Write-Host "Summary of actions performed:" -ForegroundColor Yellow
-    Write-Host "1. ✓ Proper Edge uninstallation" -ForegroundColor Green
-    Write-Host "2. ✓ Force removal of Edge files and dirs" -ForegroundColor Green  
-    Write-Host "3. ✓ Comprehensive user profile cleanup" -ForegroundColor Green
-    Write-Host "4. ✓ System-level file and registry cleanup" -ForegroundColor Green
-    Write-Host "5. ✓ APPX package management" -ForegroundColor Green
     Write-Host "`nA system restart is recommended to complete the removal process."
     Write-Host "Note: Some protected system components may remain but core Edge functionality should be removed." -ForegroundColor Yellow
 }

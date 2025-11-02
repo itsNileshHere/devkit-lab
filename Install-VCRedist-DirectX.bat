@@ -178,4 +178,4 @@ if ($process.ExitCode -eq 0 -or $process.ExitCode -eq 3010) {
 Write-Host "Cleaning up temporary files..."
 Remove-Item -Path $tempFolder -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host "Installation process completed!" -ForegroundColor Cyan
-Read-Host -Prompt "Done. Press Enter to exit"
+pause

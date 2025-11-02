@@ -112,7 +112,7 @@ if (Test-Path $regPath) {
 else {
     Write-Host "`nOnedrive is not installed." -ForegroundColor Yellow
     Start-Process "explorer.exe"
-    Read-Host -Prompt "Press Enter to exit"
+    pause
     Exit
 }
 
@@ -205,4 +205,4 @@ Start-Process "explorer.exe"
 
 Start-Sleep -Milliseconds 1500
 Write-Host "`nOneDrive Removed Successfully." -ForegroundColor Green
-Read-Host -Prompt "Done. Press Enter to exit"
+pause
